@@ -104,6 +104,39 @@ const doorRoughnessTexture = textureLoader.load('./door/roughness.jpg')
 
 doorColorTexture.colorSpace = THREE.SRGBColorSpace
 
+// Path
+const pathColorTexture = textureLoader.load('./path/cobblestone_floor_01_1k/textures/cobblestone_floor_01_diff_1k.jpg')
+const pathARMTexture = textureLoader.load('./path/cobblestone_floor_01_1k/textures/cobblestone_floor_01_arm_1k.jpg')
+const pathNormalTexture = textureLoader.load('./path/cobblestone_floor_01_1k/textures/cobblestone_floor_01_nor_gl_1k.jpg')
+
+pathColorTexture.repeat.set(1, 4)
+pathARMTexture.repeat.set(1, 4)
+pathNormalTexture.repeat.set(1, 4)
+
+pathColorTexture.wrapS = THREE.RepeatWrapping
+pathARMTexture.wrapS = THREE.RepeatWrapping
+pathNormalTexture.wrapS = THREE.RepeatWrapping
+
+pathColorTexture.wrapT = THREE.RepeatWrapping
+pathARMTexture.wrapT = THREE.RepeatWrapping
+pathNormalTexture.wrapT = THREE.RepeatWrapping
+
+pathColorTexture.colorSpace = THREE.SRGBColorSpace
+
+// Wood
+const woodColorTexture = textureLoader.load('./wood/weathered_planks_1k/textures/weathered_planks_diff_1k.jpg')
+const woodARMTexture = textureLoader.load('./wood/weathered_planks_1k/textures/weathered_planks_arm_1k.jpg')
+const woodNormalTexture = textureLoader.load('./wood/weathered_planks_1k/textures/weathered_planks_nor_gl_1k.jpg')
+
+woodColorTexture.colorSpace = THREE.SRGBColorSpace
+
+// Rock
+const rockColorTexture = textureLoader.load('./rock/rock_boulder_cracked_1k/textures/rock_boulder_cracked_diff_1k.jpg')
+const rockARMTexture = textureLoader.load('./rock/rock_boulder_cracked_1k/textures/rock_boulder_cracked_arm_1k.jpg')
+const rockNormalTexture = textureLoader.load('./rock/rock_boulder_cracked_1k/textures/rock_boulder_cracked_nor_gl_1k.jpg')
+
+rockColorTexture.colorSpace = THREE.SRGBColorSpace
+
 /**
  * House
  */
@@ -184,6 +217,102 @@ door.position.y = 1
 door.position.z = 2 + 0.01
 house.add(door)
 
+// Windows
+const windowFrameGeometry = new THREE.BoxGeometry(1.1, 1.3, 0.08)
+const windowGlassGeometry = new THREE.PlaneGeometry(0.9, 1.1)
+const windowBarVerticalGeometry = new THREE.BoxGeometry(0.06, 1.1, 0.05)
+const windowBarHorizontalGeometry = new THREE.BoxGeometry(0.9, 0.06, 0.05)
+
+const woodMaterial = new THREE.MeshStandardMaterial({
+    map: woodColorTexture,
+    aoMap: woodARMTexture,
+    roughnessMap: woodARMTexture,
+    metalnessMap: woodARMTexture,
+    normalMap: woodNormalTexture
+})
+
+const windowGlassMaterial = new THREE.MeshStandardMaterial({
+    color: '#222222',
+    emissive: '#ff7d46',
+    emissiveIntensity: 0,
+    roughness: 0.2
+})
+
+const windowsData = [
+    { x: 2, z: 0, rotation: Math.PI * 0.5 },
+    { x: - 2, z: 0, rotation: - Math.PI * 0.5 },
+]
+
+for(const windowData of windowsData)
+{
+    const houseWindow = new THREE.Group()
+    houseWindow.position.set(windowData.x, 1.5, windowData.z)
+    houseWindow.rotation.y = windowData.rotation
+
+    const windowFrame = new THREE.Mesh(windowFrameGeometry, woodMaterial)
+    const windowGlass = new THREE.Mesh(windowGlassGeometry, windowGlassMaterial)
+    windowGlass.position.z = 0.045
+
+    const windowBarVertical = new THREE.Mesh(windowBarVerticalGeometry, woodMaterial)
+    const windowBarHorizontal = new THREE.Mesh(windowBarHorizontalGeometry, woodMaterial)
+    windowBarVertical.position.z = 0.07
+    windowBarHorizontal.position.z = 0.07
+
+    houseWindow.add(windowFrame, windowGlass, windowBarVertical, windowBarHorizontal)
+    house.add(houseWindow)
+}
+
+// Path
+const pathGeometry = new THREE.PlaneGeometry(1.2, 8, 8, 60)
+const pathPositions = pathGeometry.attributes.position
+
+for(let i = 0; i < pathPositions.count; i++)
+{
+    const x = pathPositions.getX(i)
+    const y = pathPositions.getY(i)
+
+    const progress = 0.5 - y / 8
+
+    const meander = (Math.sin(y * 1.1) * 0.15 + Math.sin(y * 2.7) * 0.06) * progress
+    const widthFactor = 1 + Math.sin(y * 3.1 + 1) * 0.12 + Math.sin(y * 7.3) * 0.06
+
+    const jitter = Math.abs(x) > 0.5 ? (Math.random() - 0.5) * 0.14 : 0
+
+    pathPositions.setX(i, x * widthFactor + meander + jitter)
+}
+
+const pathColors = new Float32Array(pathPositions.count * 4)
+
+for(let i = 0; i < pathPositions.count; i++)
+{
+    const y = pathPositions.getY(i)
+    const progress = 0.5 - y / 8
+    const alpha = 1 - THREE.MathUtils.smoothstep(progress, 0.6, 1)
+
+    pathColors[i * 4] = 1
+    pathColors[i * 4 + 1] = 1
+    pathColors[i * 4 + 2] = 1
+    pathColors[i * 4 + 3] = alpha
+}
+
+pathGeometry.setAttribute('color', new THREE.BufferAttribute(pathColors, 4))
+
+const path = new THREE.Mesh(
+    pathGeometry,
+    new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        transparent: true,
+        map: pathColorTexture,
+        aoMap: pathARMTexture,
+        roughnessMap: pathARMTexture,
+        metalnessMap: pathARMTexture,
+        normalMap: pathNormalTexture
+    })
+)
+path.rotation.x = - Math.PI * 0.5
+path.position.set(0, 0.05, 6)
+scene.add(path)
+
 // Bushes
 const bushGeometry = new THREE.SphereGeometry(1, 16, 16)
 const bushMaterial = new THREE.MeshStandardMaterial({
@@ -238,6 +367,9 @@ for(let i = 0; i < 30; i++)
     const x = Math.sin(angle) * radius
     const z = Math.cos(angle) * radius
 
+    if(Math.abs(x) < 1 && z > 0)
+        continue
+
     // Mesh
     const grave = new THREE.Mesh(graveGeometry, graveMaterial)
     grave.position.x = x
@@ -251,6 +383,131 @@ for(let i = 0; i < 30; i++)
     // Add to the graves group
     graves.add(grave)
 }
+
+// Fence
+const fencePostGeometry = new THREE.BoxGeometry(0.15, 1.2, 0.15)
+const fenceRailGeometry = new THREE.BoxGeometry(18, 0.1, 0.05)
+const fenceFrontRailGeometry = new THREE.BoxGeometry(7.5, 0.1, 0.05)
+
+const fence = new THREE.Group()
+scene.add(fence)
+
+for(let i = 0; i < 13; i++)
+{
+    const offset = - 9 + i * 1.5
+
+    // Back
+    const postBack = new THREE.Mesh(fencePostGeometry, woodMaterial)
+    postBack.position.set(offset, 0.5, - 9)
+    fence.add(postBack)
+
+    // Front
+    if(Math.abs(offset) > 0.1)
+    {
+        const postFront = new THREE.Mesh(fencePostGeometry, woodMaterial)
+        postFront.position.set(offset, 0.5, 9)
+        fence.add(postFront)
+    }
+
+    // Sides
+    if(i > 0 && i < 12)
+    {
+        const postLeft = new THREE.Mesh(fencePostGeometry, woodMaterial)
+        postLeft.position.set(- 9, 0.5, offset)
+
+        const postRight = new THREE.Mesh(fencePostGeometry, woodMaterial)
+        postRight.position.set(9, 0.5, offset)
+
+        fence.add(postLeft, postRight)
+    }
+}
+
+for(const railHeight of [0.35, 0.85])
+{
+    const railBack = new THREE.Mesh(fenceRailGeometry, woodMaterial)
+    railBack.position.set(0, railHeight, - 9)
+
+    const railLeft = new THREE.Mesh(fenceRailGeometry, woodMaterial)
+    railLeft.position.set(- 9, railHeight, 0)
+    railLeft.rotation.y = Math.PI * 0.5
+
+    const railRight = new THREE.Mesh(fenceRailGeometry, woodMaterial)
+    railRight.position.set(9, railHeight, 0)
+    railRight.rotation.y = Math.PI * 0.5
+
+    const railFrontLeft = new THREE.Mesh(fenceFrontRailGeometry, woodMaterial)
+    railFrontLeft.position.set(- 5.25, railHeight, 9)
+
+    const railFrontRight = new THREE.Mesh(fenceFrontRailGeometry, woodMaterial)
+    railFrontRight.position.set(5.25, railHeight, 9)
+
+    fence.add(railBack, railLeft, railRight, railFrontLeft, railFrontRight)
+}
+
+// Rocks
+const rockGeometry = new THREE.DodecahedronGeometry(1)
+const rockMaterial = new THREE.MeshStandardMaterial({
+    color: '#6e6862',
+    map: rockColorTexture,
+    aoMap: rockARMTexture,
+    roughnessMap: rockARMTexture,
+    metalnessMap: rockARMTexture,
+    normalMap: rockNormalTexture
+})
+
+const rocks = new THREE.Group()
+scene.add(rocks)
+
+for(let i = 0; i < 18; i++)
+{
+    // Coordinates
+    const angle = Math.random() * Math.PI * 2
+    const radius = 3 + Math.random() * 5.5
+    const x = Math.sin(angle) * radius
+    const z = Math.cos(angle) * radius
+
+    if(Math.abs(x) < 1 && z > 0)
+        continue
+
+    // Mesh
+    const rockScale = 0.1 + Math.random() * 0.25
+    const rock = new THREE.Mesh(rockGeometry, rockMaterial)
+    rock.scale.set(rockScale, rockScale * 0.6, rockScale)
+    rock.position.set(x, 0.05, z)
+    rock.rotation.x = Math.random() * Math.PI
+    rock.rotation.y = Math.random() * Math.PI
+    rock.rotation.z = Math.random() * Math.PI
+
+    // Add to the rocks group
+    rocks.add(rock)
+}
+
+// Outhouse
+const outhouse = new THREE.Group()
+outhouse.position.set(- 4, 0, - 7.8)
+outhouse.rotation.y = Math.PI * 0.15
+scene.add(outhouse)
+
+const outhouseWalls = new THREE.Mesh(
+    new THREE.BoxGeometry(1.2, 2, 1.2),
+    woodMaterial
+)
+outhouseWalls.position.y = 1
+
+const outhouseRoof = new THREE.Mesh(
+    new THREE.ConeGeometry(1, 0.6, 4),
+    roof.material
+)
+outhouseRoof.position.y = 2 + 0.3
+outhouseRoof.rotation.y = Math.PI * 0.25
+
+const outhouseDoor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 1.4, 0.05),
+    new THREE.MeshStandardMaterial({ color: '#555555', map: woodColorTexture, normalMap: woodNormalTexture })
+)
+outhouseDoor.position.set(0, 0.75, 0.61)
+
+outhouse.add(outhouseWalls, outhouseRoof, outhouseDoor)
 
 // Door light
 const doorLight = new THREE.PointLight('#ff7d46', 5)
@@ -342,6 +599,17 @@ walls.receiveShadow = true
 roof.castShadow = true
 floor.receiveShadow = true
 
+path.receiveShadow = true
+outhouseWalls.castShadow = true
+outhouseWalls.receiveShadow = true
+outhouseRoof.castShadow = true
+
+for(const rock of rocks.children)
+{
+    rock.castShadow = true
+    rock.receiveShadow = true
+}
+
 for(const grave of graves.children)
 {
     grave.castShadow = true
@@ -390,9 +658,57 @@ sky.material.uniforms['sunPosition'].value.set(0.3, -0.038, -0.95)
 scene.fog = new THREE.FogExp2('#04343f', 0.1)
 
 /**
+ * Audio
+ */
+const ambientSound = new Audio('./sounds/ambient.mp3')
+ambientSound.loop = true
+ambientSound.volume = 0.4
+
+window.addEventListener('pointerdown', () =>
+{
+    ambientSound.play()
+}, { once: true })
+
+/**
+ * Settings
+ */
+const settings = {
+    ghostSpeed: 1,
+    doorLightIntensity: 5,
+    doorFlicker: 0.5
+}
+
+// Lights
+gui.add(ambientLight, 'intensity').min(0).max(2).step(0.001).name('ambientIntensity')
+gui.add(directionalLight, 'intensity').min(0).max(3).step(0.001).name('directionalIntensity')
+gui.add(settings, 'doorLightIntensity').min(0).max(15).step(0.01)
+gui.add(settings, 'doorFlicker').min(0).max(1).step(0.01)
+gui.add(ghost1, 'intensity').min(0).max(20).step(0.01).name('ghost1Intensity')
+gui.add(ghost2, 'intensity').min(0).max(20).step(0.01).name('ghost2Intensity')
+gui.add(ghost3, 'intensity').min(0).max(20).step(0.01).name('ghost3Intensity')
+gui.add(windowGlassMaterial, 'emissiveIntensity').min(0).max(2).step(0.01).name('windowGlow')
+
+// Colors
+gui.addColor(ambientLight, 'color').name('ambientColor')
+gui.addColor(directionalLight, 'color').name('directionalColor')
+gui.addColor(doorLight, 'color').name('doorLightColor')
+gui.addColor(ghost1, 'color').name('ghost1Color')
+gui.addColor(ghost2, 'color').name('ghost2Color')
+gui.addColor(ghost3, 'color').name('ghost3Color')
+gui.addColor(windowGlassMaterial, 'emissive').name('windowColor')
+gui.addColor(scene.fog, 'color').name('fogColor')
+
+// Other
+gui.add(settings, 'ghostSpeed').min(0).max(5).step(0.01)
+gui.add(scene.fog, 'density').min(0).max(0.3).step(0.001).name('fogDensity')
+gui.add(ambientSound, 'volume').min(0).max(1).step(0.01).name('soundVolume')
+
+/**
  * Animate
  */
 const timer = new Timer()
+
+let ghostTime = 0
 
 const tick = () =>
 {
@@ -400,21 +716,29 @@ const tick = () =>
     timer.update()
     const elapsedTime = timer.getElapsed()
 
+    const deltaTime = timer.getDelta()
+    ghostTime += deltaTime * settings.ghostSpeed
+
     // Ghosts
-    const ghost1Angle = elapsedTime * 0.5
+    const ghost1Angle = ghostTime * 0.5
     ghost1.position.x = Math.cos(ghost1Angle) * 4
     ghost1.position.z = Math.sin(ghost1Angle) * 4
     ghost1.position.y = Math.sin(ghost1Angle) * Math.sin(ghost1Angle * 2.34) * Math.sin(ghost1Angle * 3.45)
 
-    const ghost2Angle = -elapsedTime * 0.38
+    const ghost2Angle = -ghostTime * 0.38
     ghost2.position.x = Math.cos(ghost2Angle) * 5
     ghost2.position.z = Math.sin(ghost2Angle) * 5
     ghost2.position.y = Math.sin(ghost2Angle) * Math.sin(ghost2Angle * 2.34) * Math.sin(ghost2Angle * 3.45)
 
-    const ghost3Angle = elapsedTime * 0.23
+    const ghost3Angle = ghostTime * 0.23
     ghost3.position.x = Math.cos(ghost3Angle) * 6
     ghost3.position.z = Math.sin(ghost3Angle) * 6
     ghost3.position.y = Math.sin(ghost3Angle) * Math.sin(ghost3Angle * 2.34) * Math.sin(ghost3Angle * 3.45)
+
+    // Door light flicker
+    const doorFlicker = Math.sin(elapsedTime * 10) * Math.sin(elapsedTime * 23.4) * Math.sin(elapsedTime * 37.8)
+    const doorFlickerFactor = 1 - settings.doorFlicker * (0.5 + doorFlicker * 0.5) + (Math.random() - 0.5) * settings.doorFlicker * 0.3
+    doorLight.intensity = settings.doorLightIntensity * Math.max(0, doorFlickerFactor)
 
     // Update controls
     controls.update()
